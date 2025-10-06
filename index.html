@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moody Bird Story Pager</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom CSS for Paging Effect */
+        .page-content {
+            transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+        }
+        .page-enter {
+            opacity: 0;
+            transform: translateX(10%);
+        }
+        .page-enter-left {
+            opacity: 0;
+            transform: translateX(-10%);
+        }
+        .page-active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        #summary-info, #currentabspath, #image-filename {
+            display:none;
+          
+          }
+        
+        /* Lightbox CSS */
+        .lightbox-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .lightbox-content {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            transform: scale(0.9);
+            opacity: 0;
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+        }
+        .lightbox-modal.open {
+            display: flex;
+        }
+        .lightbox-modal.open .lightbox-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .lightbox-close:hover {
+            color: #ccc;
+        }
+
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans antialiased flex flex-col items-center p-4">
+
+    <!-- Header & Summary -->
+    <header class="w-full max-w-6xl text-center mb-6 pt-4">
+        <h1 class="text-4xl font-extrabold text-blue-900 tracking-tight">Moody Bird Story Collection</h1>
+        <!-- Re-added summary-info element for status display -->
+        <p id="summary-info" class="text-gray-600 mt-2 text-sm md:text-base">
+            Loading...
+        </p> 
+    </header>
+
+    <!-- Main Content Card (The Page Viewer) - Now uses max-w-6xl -->
+    <div class="w-full max-w-6xl bg-white shadow-2xl rounded-xl overflow-hidden flex flex-col mb-6 min-h-[600px]">
+        
+        <!-- Navigation Buttons Container (Mobile only) -->
+        <div class="flex flex-row justify-between lg:hidden p-4">
+            <button id="prev-btn-mobile" class="nav-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors">
+                &larr; Prev
+            </button>
+            <button id="next-btn-mobile" class="nav-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                Next &rarr;
+            </button>
+        </div>
+
+        <!-- Desktop 3-Column Layout: Image | Content | Navigation -->
+        <div class="lg:grid lg:grid-cols-[1.5fr_2.5fr_1fr] h-full">
+
+            <!-- Column 1: Image Viewer -->
+            <!-- Added cursor-pointer to indicate clickability -->
+            <div id="image-container" class="p-6 flex flex-col items-center justify-center bg-gray-100 border-b lg:border-none cursor-pointer">
+                <div class="w-full rounded-lg overflow-hidden shadow-xl border-4 border-white transform hover:scale-[1.01] transition-transform duration-300">
+                    <img id="page-image" src="" alt="Page Image" class="w-full h-full object-cover">
+                </div>
+                <p id="image-filename" class="text-xs text-gray-500 mt-2 font-mono break-all text-center"></p>
+            </div>
+
+            <!-- Column 2: Story and Metadata -->
+            <div class="p-6 flex flex-col justify-start border-b lg:border-r lg:border-l border-gray-200">
+                <div id="page-content" class="page-content page-active">
+                    <p id="page-counter" class="text-xs font-semibold text-blue-500 mb-2 tracking-wider uppercase">Loading Content...</p>
+                    <h2 id="page-title" class="text-2xl md:text-3xl font-bold text-gray-900 mb-4"></h2>
+                    
+                    <h3 class="text-xl font-semibold text-blue-800 border-b pb-2 mb-3 mt-4">The Short Story</h3>
+                    <p id="page-shortstory" class="text-gray-700 leading-relaxed italic border-l-4 border-blue-200 pl-4 py-2"></p>
+
+                    <h3 class="text-xl font-semibold text-blue-800 border-b pb-2 mb-3 mt-6">AI Description & Keywords</h3>
+                    <p id="page-description" class="text-gray-600 mb-2"></p>
+                    
+                    <div class="mt-4">
+                        <span id="page-keywords" class="flex flex-wrap gap-2">
+                            <!-- Keywords generated here -->
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column 3: Side Navigation (Desktop only) -->
+            <div id="side-nav-column" class="hidden lg:flex flex-col justify-between p-6 bg-gray-50">
+                <div class="flex flex-col gap-4">
+                    <h3 class="text-base font-semibold text-gray-700 uppercase tracking-wider mb-2 border-b pb-2">Navigation</h3>
+                    
+                    <button id="prev-btn-desktop" class="nav-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-4 rounded-lg shadow-md transition-colors" disabled>
+                        <span class="text-2xl leading-none">&larr;</span> Previous Page
+                    </button>
+                    
+                    <button id="next-btn-desktop" class="nav-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-colors" disabled>
+                        Next Page <span class="text-2xl leading-none">&rarr;</span>
+                    </button>
+                </div>
+                
+                <div id="currentabspath" class="text-center mt-8 p-3 bg-white rounded-lg border">
+                    <h4 class="text-xs font-semibold text-gray-500 uppercase mb-1">Original Absolute Path</h4>
+                    <span id="current-abs-path" class="font-mono text-[10px] text-gray-700 break-all"></span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    
+    <!-- Lightbox Modal Structure -->
+    <div id="lightbox-modal" class="lightbox-modal" onclick="closeLightbox(event)">
+        <span class="lightbox-close" onclick="closeLightbox(event)">&times;</span>
+        <img id="lightbox-image" class="lightbox-content" src="" alt="Full-size Image">
+    </div>
+
+    <script>
+        // --- EMBEDDED JSON DATA ---
+        // Since hosting static JSON files is often restricted, we embed the data here.
+        const JSON_DATA_STRING = `{
+"summary": {
+"processed": 37,
+"errors": 0,
+"skipped": 0,
+"start_time": "2025-10-05T13:46:16.548846",
+"end_time": "2025-10-05T13:50:20.771241",
+"duration": "0:04:04.222395"
+},
+"detailed_log": [
+{
+"file_path": "page_06.jpg",
+"start_time": "2025-10-05T13:46:33.731275",
+"status": "started",
+"original_file_size": 559631,
+"original_mtime": 1759258078.8999174,
+"ai_response": {
+"title": "Surreal Urban Landscape:A Whimsical and Chaotic Vision",
+"description": "This is a surreal illustration depicting an intricate urban environment teeming with bizarre figures and structures.",
+"keywords": [
+"surrealism",
+"urban landscape",
+"illustration",
+"abstract art",
+"whimsical"
+],
+"shortstory": "The musicians melody warped the city, twisting buildings into fantastical shapes. A curious creature emerged from a dense green space, drawn by the strange sound. Pedestrians with watchful eyes navigated the chaotic streets, seemingly oblivious to the transformation. Colors pulsed and blended as reality itself seemed to dissolve into imagination. In this dreamscape, anything felt possible."
+},
+"ai_description": "This is a surreal illustration depicting an intricate urban environment teeming with bizarre figures and structures.",
+"ai_keywords": [
+"surrealism",
+"urban landscape",
+"illustration",
+"abstract art",
+"whimsical"
+],
+"ai_shortstory": "The musicians melody warped the city, twisting buildings into fantastical shapes. A curious creature emerged from a dense green space, drawn by the strange sound. Pedestrians with watchful eyes navigated the chaotic streets, seemingly oblivious to the transformation. Colors pulsed and blended as reality itself seemed to dissolve into imagination. In this dreamscape, anything felt possible.",
+"end_time": "2025-10-05T13:46:40.365912"
+},
+{
+"file_path": "page_08.jpg",
+"start_time": "2025-10-05T13:46:40.366310",
+"status": "started",
+"original_file_size": 455679,
+"original_mtime": 1759258078.990024,
+"ai_response": {
+"title": "Surreal Folkloric Scene:A Vibrant and Whimsical Composition",
+"description": "The artwork presents a densely patterned, dreamlike scene featuring stylized figures, botanical elements, and an unusual bird-like creature.",
+"keywords": [
+"surrealism",
+"folk art",
+"botanical",
+"whimsical",
+"colorful"
+],
+"shortstory": "Deep within a vibrant jungle lived a musician whose melodies could awaken spirits. A strange, long-beaked guide appeared to lead him on his quest. Surrounded by blooming flora and watchful faces, he strummed a hopeful tune. The music resonated with the ancient forest, bringing forth fantastical beings. It was a moment of joyous communion between nature and artistry."
+},
+"ai_description": "The artwork presents a densely patterned, dreamlike scene featuring stylized figures, botanical elements, and an unusual bird-like creature.",
+"ai_keywords": [
+"surrealism",
+"folk art",
+"botanical",
+"whimsical",
+"colorful"
+],
+"ai_shortstory": "Deep within a vibrant jungle lived a musician whose melodies could awaken spirits. A strange, long-beaked guide appeared to lead him on his quest. Surrounded by blooming flora and watchful faces, he strummed a hopeful tune. The music resonated with the ancient forest, bringing forth fantastical beings. It was a moment of joyous communion between nature and artistry.",
+"end_time": "2025-10-05T13:46:47.123677"
+},
+{
+"file_path": "page_10.jpg",
+"start_time": "2025-10-05T13:46:47.123854",
+"status": "started",
+"original_file_size": 532713,
+"original_mtime": 1759258079.0675266,
+"ai_response": {
+"title": "Surreal Tribal Gathering - Whimsical and Chaotic",
+"description": "This is a vibrant and complex artwork featuring stylized figures within an intricate black and white patterned background.",
+"keywords": [
+"surrealism",
+"tribal art",
+"whimsical",
+"patterned",
+"colorful"
+],
+"shortstory": "The annual Spirit Festival arrived, bringing together masked revelers in a dreamlike mountain landscape. Each figure pulsed with hidden energy, their expressions playful and enigmatic. A yellow-eyed bird observed the festivities from above, its song weaving through the swirling patterns. The celebration continued until dawn, leaving behind only echoes of laughter and vibrant color. It was a night where reality blurred into an unforgettable vision."
+},
+"ai_description": "This is a vibrant and complex artwork featuring stylized figures within an intricate black and white patterned background.",
+"ai_keywords": [
+"surrealism",
+"tribal art",
+"whimsical",
+"patterned",
+"colorful"
+],
+"ai_shortstory": "The annual Spirit Festival arrived, bringing together masked revelers in a dreamlike mountain landscape. Each figure pulsed with hidden energy, their expressions playful and enigmatic. A yellow-eyed bird observed the festivities from above, its song weaving through the swirling patterns. The celebration continued until dawn, leaving behind only echoes of laughter and vibrant color. It was a night where reality blurred into an unforgettable vision.",
+"end_time": "2025-10-05T13:46:53.886625"
+},
+{
+"file_path": "page_12.jpg",
+"start_time": "2025-10-05T13:46:53.887466",
+"status": "started",
+"original_file_size": 436789,
+"original_mtime": 1759258079.119406,
+"ai_response": {
+"title": "Musical Reverie:Abstract Portrait and Guitar",
+"description": "This vibrant artwork features a stylized portrait intertwined with an acoustic guitar amidst abstract patterns and bold colors.",
+"keywords": [
+"abstract art",
+"portrait",
+"guitar",
+"music",
+"colorful"
+],
+"shortstory": "The musicians soul resonated within the strings of her beloved guitar, inspiring swirling visions. Lines danced and merged, creating a world born from melody and emotion. Her face reflected the intensity of the performance, a moment captured in a riot of hues. The music transcended form, becoming an explosion of vibrant energy and connection. It was a silent song, visualized."
+},
+"ai_description": "This vibrant artwork features a stylized portrait intertwined with an acoustic guitar amidst abstract patterns and bold colors.",
+"ai_keywords": [
+"abstract art",
+"portrait",
+"guitar",
+"music",
+"colorful"
+],
+"ai_shortstory": "The musicians soul resonated within the strings of her beloved guitar, inspiring swirling visions. Lines danced and merged, creating a world born from melody and emotion. Her face reflected the intensity of the performance, a moment captured in a riot of hues. The music transcended form, becoming an explosion of vibrant energy and connection. It was a silent song, visualized.",
+"end_time": "2025-10-05T13:47:00.266845"
+},
+{
+"file_path": "page_14.jpg",
+"start_time": "2025-10-05T13:47:00.267090",
+"status": "started",
+"original_file_size": 381697,
+"original_mtime": 1759258079.172489,
+"ai_response": {
+"title": "Intricate Faces - Black and White Patterned Art",
+"description": "This is a detailed black and white drawing featuring multiple faces intertwined within complex geometric patterns.",
+"keywords": [
+"drawing",
+"pattern",
+"faces",
+"geometric",
+"blackandwhite"
+],
+"shortstory": "Lost in a labyrinth of lines, several figures gaze out with curious expressions. Their features emerge from an intricate web of repeating shapes and forms, hinting at hidden connections. Each face seems to whisper secrets within this dense visual puzzle. The artists meticulous detail creates a sense of mystery and intrigue.A silent conversation unfolds within the artworks complex design."
+},
+"ai_description": "This is a detailed black and white drawing featuring multiple faces intertwined within complex geometric patterns.",
+"ai_keywords": [
+"drawing",
+"pattern",
+"faces",
+"geometric",
+"blackandwhite"
+],
+"ai_shortstory": "Lost in a labyrinth of lines, several figures gaze out with curious expressions. Their features emerge from an intricate web of repeating shapes and forms, hinting at hidden connections. Each face seems to whisper secrets within this dense visual puzzle. The artists meticulous detail creates a sense of mystery and intrigue.A silent conversation unfolds within the artworks complex design.",
+"end_time": "2025-10-05T13:47:06.637648"
+},
+{
+"file_path": "page_16.jpg",
+"start_time": "2025-10-05T13:47:06.637898",
+"status": "started",
+"original_file_size": 382260,
+"original_mtime": 1759258079.2272449,
+"ai_response": {
+"title": "Abstract Composition:Figures and Geometric Forms",
+"description": "This black-and-white artwork features a complex arrangement of stylized figures intertwined with geometric shapes and patterns.",
+"keywords": [
+"abstract art",
+"geometric design",
+"figure drawing",
+"black and white",
+"pattern"
+],
+"shortstory": "The silent city hummed with unseen energy, its inhabitants frozen in intricate poses. Geometric structures spiraled upwards, forming a labyrinthine backdrop to their existence. A solitary bird observed the scene from above, its gaze fixed on an unknowable future. Shadows danced between the shapes, hinting at secrets hidden within the artworks depths.It was a moment suspended in time, captured for eternity."
+},
+"ai_description": "This black-and-white artwork features a complex arrangement of stylized figures intertwined with geometric shapes and patterns.",
+"ai_keywords": [
+"abstract art",
+"geometric design",
+"figure drawing",
+"black and white",
+"pattern"
+],
+"ai_shortstory": "The silent city hummed with unseen energy, its inhabitants frozen in intricate poses. Geometric structures spiraled upwards, forming a labyrinthine backdrop to their existence. A solitary bird observed the scene from above, its gaze fixed on an unknowable future. Shadows danced between the shapes, hinting at secrets hidden within the artworks depths.It was a moment suspended in time, captured for eternity.",
+"end_time": "2025-10-05T13:47:13.262534"
+},
+{
+"file_path": "page_18.jpg",
+"start_time": "2025-10-05T13:47:13.262764",
+"status": "started",
+"original_file_size": 368376,
+"original_mtime": 1759258079.279341,
+"ai_response": {
+"title": "Whimsical Forest Scene:Cat Musician and Magical Elements",
+"description": "This black and white illustration depicts a fantastical forest scene featuring a cat playing music beneath a mushroom.",
+"keywords": [
+"cat",
+"music",
+"mushroom",
+"forest",
+"whimsical"
+],
+"shortstory": "Deep within an enchanted wood, a curious feline strummed melodies on a tiny ukulele. A giant mushroom served as his stage, bathed in dappled sunlight filtering through the leaves. He played for a gathering of woodland creatures, their eyes wide with delight. The music filled the air, weaving a spell of joy and wonder throughout the mystical forest. It was a moment frozen in time, pure magic."
+},
+"ai_description": "This black and white illustration depicts a fantastical forest scene featuring a cat playing music beneath a mushroom.",
+"ai_keywords": [
+"cat",
+"music",
+"mushroom",
+"forest",
+"whimsical"
+],
+"ai_shortstory": "Deep within an enchanted wood, a curious feline strummed melodies on a tiny ukulele. A giant mushroom served as his stage, bathed in dappled sunlight filtering through the leaves. He played for a gathering of woodland creatures, their eyes wide with delight. The music filled the air, weaving a spell of joy and wonder throughout the mystical forest. It was a moment frozen in time, pure magic.",
+"end_time": "2025-10-05T13:47:20.191620"
+},
+{
+"file_path": "page_20.jpg",
+"start_time": "2025-10-05T13:47:20.192058",
+"status": "started",
+"original_file_size": 342779,
+"original_mtime": 1759258079.3269384,
+"ai_response": {
+"title": "Surreal Portrait - Fragmented Faces and Geometric Forms",
+"description": "This black and white drawing features a fragmented portrait surrounded by abstract geometric shapes and patterns.",
+"keywords": [
+"portrait",
+"abstract",
+"geometric",
+"surreal",
+"drawing"
+],
+"shortstory": "A fractured identity gazes out from behind layers of intricate designs. Each shape represents a forgotten memory, or perhaps, a hidden truth. The lines intertwine, creating a sense of disorientation and introspection. Though fragmented, the portrait retains an eerie beauty, hinting at resilience. Its a visual echo of a mind searching for wholeness."
+},
+"ai_description": "This black and white drawing features a fragmented portrait surrounded by abstract geometric shapes and patterns.",
+"ai_keywords": [
+"portrait",
+"abstract",
+"geometric",
+"surreal",
+"drawing"
+],
+"ai_shortstory": "A fractured identity gazes out from behind layers of intricate designs. Each shape represents a forgotten memory, or perhaps, a hidden truth. The lines intertwine, creating a sense of disorientation and introspection. Though fragmented, the portrait retains an eerie beauty, hinting at resilience. Its a visual echo of a mind searching for wholeness.",
+"end_time": "2025-10-05T13:47:26.574440"
+},
+{
+"file_path": "page_22.jpg",
+"start_time": "2025-10-05T13:47:26.574814",
+"status": "started",
+"original_file_size": 271737,
+"original_mtime": 1759258079.374692,
+"ai_response": {
+"title": "Cat Portrait:Surreal Headscape in Black and White",
+"description": "This black and white illustration depicts a cat-like figure wearing a hat, surrounded by surreal floating faces and geometric shapes.",
+"keywords": [
+"cat",
+"portrait",
+"surrealism",
+"black and white",
+"illustration"
+],
+"shortstory": "The feline muse dreamed of a thousand faces, each whispering secrets from beyond. They floated above her head, mirroring emotions she couldnt name. A jaunty hat shielded her eyes as she navigated this ethereal landscape. The world dissolved into swirling patterns of line and shadow, a beautiful chaos. She closed her eyes, content to be lost in the dream."
+},
+"ai_description": "This black and white illustration depicts a cat-like figure wearing a hat, surrounded by surreal floating faces and geometric shapes.",
+"ai_keywords": [
+"cat",
+"portrait",
+"surrealism",
+"black and white",
+"illustration"
+],
+"ai_shortstory": "The feline muse dreamed of a thousand faces, each whispering secrets from beyond. They floated above her head, mirroring emotions she couldnt name. A jaunty hat shielded her eyes as she navigated this ethereal landscape. The world dissolved into swirling patterns of line and shadow, a beautiful chaos. She closed her eyes, content to be lost in the dream.",
+"end_time": "2025-10-05T13:47:33.173154"
+},
+{
+"file_path": "page_24.jpg",
+"start_time": "2025-10-05T13:47:33.173405",
+"status": "started",
+"original_file_size": 361093,
+"original_mtime": 1759258079.4269977,
+"ai_response": {
+"title": "Musical Dreams:An Intricate Black and White Illustration",
+"description": "This is a detailed black and white illustration featuring faces, birds, and an acoustic guitar interwoven in a complex pattern.",
+"keywords": [
+"illustration",
+"black and white",
+"music",
+"birds",
+"abstract"
+],
+"shortstory": "The musician dreamt of melodies carried by graceful birds. His guitar resonated with the whispers of ancient spirits embodied in the faces surrounding him. Each line etched a memory, a feeling, a moment captured in time. A single note escaped, lifting the scene into an ethereal realm. The dream lingered, promising a symphony yet to be composed."
+},
+"ai_description": "This is a detailed black and white illustration featuring faces, birds, and an acoustic guitar interwoven in a complex pattern.",
+"ai_keywords": [
+"illustration",
+"black and white",
+"music",
+"birds",
+"abstract"
+],
+"ai_shortstory": "The musician dreamt of melodies carried by graceful birds. His guitar resonated with the whispers of ancient spirits embodied in the faces surrounding him. Each line etched a memory, a feeling, a moment captured in time. A single note escaped, lifting the scene into an ethereal realm. The dream lingered, promising a symphony yet to be composed.",
+"end_time": "2025-10-05T13:47:39.611621"
+},
+{
+"file_path": "page_26.jpg",
+"start_time": "2025-10-05T13:47:39.611879",
+"status": "started",
+"original_file_size": 373493,
+"original_mtime": 1759258079.4777257,
+"ai_response": {
+"title": "Surreal Cityscape:A Dreamlike Automotive Scene",
+"description": "This black and white illustration depicts a surreal cityscape incorporating faces, musical instruments, and a vintage car.",
+"keywords": [
+"surrealism",
+"cityscape",
+"automotive",
+"drawing",
+"abstract"
+],
+"shortstory": "A curious driver navigates the peculiar streets of a dream city. Buildings morph into faces and melodies echo from musical structures. The vintage car rolls along, seemingly oblivious to the whimsical environment. Its as though reality has blended with imagination. This journey is a silent exploration of subconscious thought."
+},
+"ai_description": "This black and white illustration depicts a surreal cityscape incorporating faces, musical instruments, and a vintage car.",
+"ai_keywords": [
+"surrealism",
+"cityscape",
+"automotive",
+"drawing",
+"abstract"
+],
+"ai_shortstory": "A curious driver navigates the peculiar streets of a dream city. Buildings morph into faces and melodies echo from musical structures. The vintage car rolls along, seemingly oblivious to the whimsical environment. Its as though reality has blended with imagination. This journey is a silent exploration of subconscious thought.",
+"end_time": "2025-10-05T13:47:45.867948"
+},
+{
+"file_path": "page_28.jpg",
+"start_time": "2025-10-05T13:47:45.868182",
+"status": "started",
+"original_file_size": 219559,
+"original_mtime": 1759258079.5234208,
+"ai_response": {
+"title": "Abstract Figures and Geometric Patterns - Black and White",
+"description": "This is an abstract black and white artwork featuring geometric shapes and stylized figures intertwined.",
+"keywords": [
+"abstract art",
+"geometric",
+"black and white",
+"figure drawing",
+"pattern"
+],
+"shortstory": "Two beings, composed of intricate lines and angles, reach out to connect. Their forms twist and merge within a network of sharp edges and repeating motifs. A sense of longing fills the space between them, hinting at an unspoken understanding. Though seemingly distant, their connection is vital, woven into the fabric of this strange realm. The interplay of light and shadow suggests a dance of creation and destruction."
+},
+"ai_description": "This is an abstract black and white artwork featuring geometric shapes and stylized figures intertwined.",
+"ai_keywords": [
+"abstract art",
+"geometric",
+"black and white",
+"figure drawing",
+"pattern"
+],
+"ai_shortstory": "Two beings, composed of intricate lines and angles, reach out to connect. Their forms twist and merge within a network of sharp edges and repeating motifs. A sense of longing fills the space between them, hinting at an unspoken understanding. Though seemingly distant, their connection is vital, woven into the fabric of this strange realm. The interplay of light and shadow suggests a dance of creation and destruction.",
+"end_time": "2025-10-05T13:47:52.446258"
+},
+{
+"file_path": "page_30.jpg",
+"start_time": "2025-10-05T13:47:52.446505",
+"status": "started",
+"original_file_size": 436944,
+"original_mtime": 1759258079.578361,
+"ai_response": {
+"title": "Surreal Cityscape:A Whimsical and Abstract Illustration",
+"description": "This black-and-white illustration depicts a surreal cityscape with distorted figures and intricate patterns.",
+"keywords": [
+"surrealism",
+"abstract art",
+"cityscape",
+"illustration",
+"pattern"
+],
+"shortstory": "The old car hummed, navigating the whimsical architecture of Dream City. Towering faces observed from above, their expressions unreadable. A lone figure watched from below, a silent guardian of this bizarre realm. The road ahead twisted and turned, full of unseen wonders. It was a journey only possible in the mind."
+},
+"ai_description": "This black-and-white illustration depicts a surreal cityscape with distorted figures and intricate patterns.",
+"ai_keywords": [
+"surrealism",
+"abstract art",
+"cityscape",
+"illustration",
+"pattern"
+],
+"ai_shortstory": "The old car hummed, navigating the whimsical architecture of Dream City. Towering faces observed from above, their expressions unreadable. A lone figure watched from below, a silent guardian of this bizarre realm. The road ahead twisted and turned, full of unseen wonders. It was a journey only possible in the mind.",
+"end_time": "2025-10-05T13:47:58.875772"
+},
+{
+"file_path": "page_32.jpg",
+"start_time": "2025-10-05T13:47:58.876005",
+"status": "started",
+"original_file_size": 419001,
+"original_mtime": 1759258079.631064,
+"ai_response": {
+"title": "Surreal Portrait:Musical Dreamscape in Black and White",
+"description": "This intricate black-and-white artwork depicts a stylized portrait surrounded by abstract musical instruments and patterned designs.",
+"keywords": [
+"portrait",
+"abstract",
+"music",
+"doodle art",
+"surreal"
+],
+"shortstory": "The musicians face emerged from a chaotic dream of melodies, each instrument echoing a forgotten song. Spiraling patterns pulsed with the rhythm of her inner world, a symphony of shapes and lines. A whimsical presence felt in the eyes that watched over all things musical. Lost within this intricate maze, she searched for the single note to awaken her soul. Ultimately, she finds peace amongst the chaotic beauty."
+},
+"ai_description": "This intricate black-and-white artwork depicts a stylized portrait surrounded by abstract musical instruments and patterned designs.",
+"ai_keywords": [
+"portrait",
+"abstract",
+"music",
+"doodle art",
+"surreal"
+],
+"ai_shortstory": "The musicians face emerged from a chaotic dream of melodies, each instrument echoing a forgotten song. Spiraling patterns pulsed with the rhythm of her inner world, a symphony of shapes and lines. A whimsical presence felt in the eyes that watched over all things musical. Lost within this intricate maze, she searched for the single note to awaken her soul. Ultimately, she finds peace amongst the chaotic beauty.",
+"end_time": "2025-10-05T13:48:05.475193"
+},
+{
+"file_path": "page_34.jpg",
+"start_time": "2025-10-05T13:48:05.475783",
+"status": "started",
+"original_file_size": 364322,
+"original_mtime": 1759258079.686545,
+"ai_response": {
+"title": "Entwined Figures and Symbolic Birds in Detailed Lineart",
+"description": "This black and white drawing depicts a central figure cradling a child amidst an intricate web of lines and stylized birds.",
+"keywords": [
+"line art",
+"drawing",
+"family",
+"birds",
+"symbolism"
+],
+"shortstory": "Within a labyrinth of lines, a parent embraces their child, seeking shelter from the world. Two watchful birds perch above, observing with silent wisdom. The web itself represents interconnectedness and destiny, weaving them into a shared path. Despite the complexities, love shines through in the gentle curve of the parents smile. This is a moment suspended, a portrait of belonging."
+},
+"ai_description": "This black and white drawing depicts a central figure cradling a child amidst an intricate web of lines and stylized birds.",
+"ai_keywords": [
+"line art",
+"drawing",
+"family",
+"birds",
+"symbolism"
+],
+"ai_shortstory": "Within a labyrinth of lines, a parent embraces their child, seeking shelter from the world. Two watchful birds perch above, observing with silent wisdom. The web itself represents interconnectedness and destiny, weaving them into a shared path. Despite the complexities, love shines through in the gentle curve of the parents smile. This is a moment suspended, a portrait of belonging.",
+"end_time": "2025-10-05T13:48:11.968399"
+},
+{
+"file_path": "page_36.jpg",
+"start_time": "2025-10-05T13:48:11.969014",
+"status": "started",
+"original_file_size": 405107,
+"original_mtime": 1759258079.7433481,
+"ai_response": {
+"title": "Surreal Circus Dreamscape - Black and White Illustration",
+"description": "This is a complex black and white illustration depicting surreal figures and objects layered in a dreamlike circus setting.",
+"keywords": [
+"surrealism",
+"circus",
+"illustration",
+"black and white",
+"dreamscape"
+],
+"shortstory": "The carnival arrived under a sky of shifting faces, each one reflecting a hidden desire. A lone musician played a mournful tune beneath an elaborate umbrella, lost in the swirling chaos. Figures intertwined, blurring reality with imagination within this whimsical scene. A heart wheeled forward on spokes, propelled by unspoken hope. The performance continued, a fleeting moment captured in ink."
+},
+"ai_description": "This is a complex black and white illustration depicting surreal figures and objects layered in a dreamlike circus setting.",
+"ai_keywords": [
+"surrealism",
+"circus",
+"illustration",
+"black and white",
+"dreamscape"
+],
+"ai_shortstory": "The carnival arrived under a sky of shifting faces, each one reflecting a hidden desire. A lone musician played a mournful tune beneath an elaborate umbrella, lost in the swirling chaos. Figures intertwined, blurring reality with imagination within this whimsical scene. A heart wheeled forward on spokes, propelled by unspoken hope. The performance continued, a fleeting moment captured in ink.",
+"end_time": "2025-10-05T13:48:18.439500"
+},
+{
+"file_path": "page_38.jpg",
+"start_time": "2025-10-05T13:48:18.439747",
+"status": "started",
+"original_file_size": 321909,
+"original_mtime": 1759258079.7922015,
+"ai_response": {
+"title": "Surreal Portrait:Woman with Bird and Abstract Elements",
+"description": "This black-and-white illustration depicts a stylized woman holding a bird amidst intricate geometric patterns and architectural details.",
+"keywords": [
+"portrait",
+"surrealism",
+"abstract",
+"bird",
+"line art"
+],
+"shortstory": "The musician dreamt of flight, her melodies weaving through fantastical landscapes. A feathered companion appeared, its song echoing the secrets held within the womans heart. Buildings spiraled around them, symbols of a city built on dreams and imagination. She extended her hand to share this vision with the world, hoping it would resonate across dimensions. The lines blurred between reality and fantasy, leaving behind a lasting impression."
+},
+"ai_description": "This black-and-white illustration depicts a stylized woman holding a bird amidst intricate geometric patterns and architectural details.",
+"ai_keywords": [
+"portrait",
+"surrealism",
+"abstract",
+"bird",
+"line art"
+],
+"ai_shortstory": "The musician dreamt of flight, her melodies weaving through fantastical landscapes. A feathered companion appeared, its song echoing the secrets held within the womans heart. Buildings spiraled around them, symbols of a city built on dreams and imagination. She extended her hand to share this vision with the world, hoping it would resonate across dimensions. The lines blurred between reality and fantasy, leaving behind a lasting impression.",
+"end_time": "2025-10-05T13:48:25.207872"
+},
+{
+"file_path": "page_40.jpg",
+"start_time": "2025-10-05T13:48:25.208140",
+"status": "started",
+"original_file_size": 309239,
+"original_mtime": 1759258079.8397393,
+"ai_response": {
+"title": "Musical Muse:Intricate Portrait and Instrument Design",
+"description": "This is a black and white illustration featuring a stylized portrait of a person holding an instrument, surrounded by elaborate patterns.",
+"keywords": [
+"illustration",
+"portrait",
+"music",
+"pattern",
+"abstract"
+],
+"shortstory": "The musician drew inspiration from the cosmos, translating its energy into melody. Her instrument hummed with ancient vibrations, resonating with her soul. Intricate designs adorned her attire and face, reflecting a deep connection to tradition. Each note she played unveiled hidden worlds of beauty and emotion. A timeless performance unfolded under the watchful gaze of the stars."
+},
+"ai_description": "This is a black and white illustration featuring a stylized portrait of a person holding an instrument, surrounded by elaborate patterns.",
+"ai_keywords": [
+"illustration",
+"portrait",
+"music",
+"pattern",
+"abstract"
+],
+"ai_shortstory": "The musician drew inspiration from the cosmos, translating its energy into melody. Her instrument hummed with ancient vibrations, resonating with her soul. Intricate designs adorned her attire and face, reflecting a deep connection to tradition. Each note she played unveiled hidden worlds of beauty and emotion. A timeless performance unfolded under the watchful gaze of the stars.",
+"end_time": "2025-10-05T13:48:31.572518"
+},
+{
+"file_path": "page_42.jpg",
+"start_time": "2025-10-05T13:48:31.572814",
+"status": "started",
+"original_file_size": 421252,
+"original_mtime": 1759258079.8928332,
+"ai_response": {
+"title": "Fantastical Figures Around a Central Tower",
+"description": "This black and white illustration depicts stylized figures surrounding an ornate tower with intricate details.",
+"keywords": [
+"illustration",
+"black and white",
+"figures",
+"tower",
+"fantastical"
+],
+"shortstory": "The masked revelers gathered around the Lumina Spire, drawn by its radiant energy. Each figure carried a secret, etched into their elaborate adornments. The spire pulsed with an otherworldly rhythm, guiding them in a silent dance. A curious child peered out from beneath the structure, captivated by the spectacle.Their journey had just begun."
+},
+"ai_description": "This black and white illustration depicts stylized figures surrounding an ornate tower with intricate details.",
+"ai_keywords": [
+"illustration",
+"black and white",
+"figures",
+"tower",
+"fantastical"
+],
+"ai_shortstory": "The masked revelers gathered around the Lumina Spire, drawn by its radiant energy. Each figure carried a secret, etched into their elaborate adornments. The spire pulsed with an otherworldly rhythm, guiding them in a silent dance. A curious child peered out from beneath the structure, captivated by the spectacle.Their journey had just begun.",
+"end_time": "2025-10-05T13:48:37.793193"
+},
+{
+"file_path": "page_44.jpg",
+"start_time": "2025-10-05T13:48:37.793933",
+"status": "started",
+"original_file_size": 385963,
+"original_mtime": 1759258079.9447408,
+"ai_response": {
+"title": "Surreal Musical Dreamscape:A Black and White Illustration",
+"description": "This intricate black and white illustration depicts a surreal scene with musical instruments, human-like figures, and fantastical creatures.",
+"keywords": [
+"surrealism",
+"music",
+"illustration",
+"fantasy",
+"dream"
+],
+"shortstory": "The musician plucked a single note on his peculiar instrument, summoning strange beings from the shadows. A bird-headed creature danced while a masked figure observed with enigmatic eyes. The melody warped reality, intertwining dreams and waking life into a bizarre tapestry. Lost in this sonic dreamscape, time seemed to bend and twist around every corner. It was a symphony of imagination, forever suspended in monochrome."
+},
+"ai_description": "This intricate black and white illustration depicts a surreal scene with musical instruments, human-like figures, and fantastical creatures.",
+"ai_keywords": [
+"surrealism",
+"music",
+"illustration",
+"fantasy",
+"dream"
+],
+"ai_shortstory": "The musician plucked a single note on his peculiar instrument, summoning strange beings from the shadows. A bird-headed creature danced while a masked figure observed with enigmatic eyes. The melody warped reality, intertwining dreams and waking life into a bizarre tapestry. Lost in this sonic dreamscape, time seemed to bend and twist around every corner. It was a symphony of imagination, forever suspended in monochrome.",
+"end_time": "2025-10-05T13:48:44.376052"
+},
+{
+"file_path": "page_46.jpg",
+"start_time": "2025-10-05T13:48:44.376970",
+"status": "started",
+"original_file_size": 406628,
+"original_mtime": 1759258079.9978473,
+"ai_response": {
+"title": "Surreal Whimsical Journey:A Complex Black and White Illustration",
+"description": "This intricate black and white illustration depicts a fantastical scene filled with human-like figures, birds, instruments, and architectural elements.",
+"keywords": [
+"surrealism",
+"whimsy",
+"illustration",
+"black and white",
+"fantasy"
+],
+"shortstory": "A traveling musician journeys through a dreamscape atop an elaborate wagon. Strange bird creatures guide his path amidst towering structures and curious faces. The air vibrates with the music of his instrument, weaving a spell on all who observe. He is both lost and found in this bizarre procession, forever seeking an unknown destination. Perhaps, hes simply searching for the next note."
+},
+"ai_description": "This intricate black and white illustration depicts a fantastical scene filled with human-like figures, birds, instruments, and architectural elements.",
+"ai_keywords": [
+"surrealism",
+"whimsy",
+"illustration",
+"black and white",
+"fantasy"
+],
+"ai_shortstory": "A traveling musician journeys through a dreamscape atop an elaborate wagon. Strange bird creatures guide his path amidst towering structures and curious faces. The air vibrates with the music of his instrument, weaving a spell on all who observe. He is both lost and found in this bizarre procession, forever seeking an unknown destination. Perhaps, hes simply searching for the next note.",
+"end_time": "2025-10-05T13:48:51.000696"
+},
+{
+"file_path": "page_48.jpg",
+"start_time": "2025-10-05T13:48:51.001257",
+"status": "started",
+"original_file_size": 355738,
+"original_mtime": 1759258080.0497081,
+"ai_response": {
+"title": "Abstract Faces and Geometric Forms in Black and White",
+"description": "This intricate black-and-white drawing features stylized faces emerging from a complex network of geometric shapes.",
+"keywords": [
+"abstract",
+"faces",
+"geometric",
+"drawing",
+"pattern"
+],
+"shortstory": "Within the rigid lines, a community gathers, their expressions serene and knowing. Strange structures loom overhead, casting long shadows that define their world. They are bound by shared experience within this geometric maze. A small vessel floats beneath, carrying dreams of escape or perhaps, connection. The artists signature OA marks its creation as an enigma to be pondered."
+},
+"ai_description": "This intricate black-and-white drawing features stylized faces emerging from a complex network of geometric shapes.",
+"ai_keywords": [
+"abstract",
+"faces",
+"geometric",
+"drawing",
+"pattern"
+],
+"ai_shortstory": "Within the rigid lines, a community gathers, their expressions serene and knowing. Strange structures loom overhead, casting long shadows that define their world. They are bound by shared experience within this geometric maze. A small vessel floats beneath, carrying dreams of escape or perhaps, connection. The artists signature OA marks its creation as an enigma to be pondered.",
+"end_time": "2025-10-05T13:48:57.412696"
+},
+{
+"file_path": "page_50.jpg",
+"start_time": "2025-10-05T13:48:57.412896",
+"status": "started",
+"original_file_size": 444760,
+"original_mtime": 1759258080.1101117,
+"ai_response": {
+"title": "Japanese Beauties in Intricate Black and White Design",
+"description": "The artwork depicts four Japanese women adorned in ornate traditional clothing surrounded by a complex pattern of floral and geometric designs.",
+"keywords": [
+"Japan",
+"women",
+"traditional dress",
+"pattern",
+"ornate"
+],
+"shortstory": "Beneath the blossoming cherry trees, four sisters prepared for an evening celebration. Each wore kimonos meticulously decorated with swirling vines and delicate flowers. A gentle breeze rustled their ornate headdresses as they fanned themselves in the twilight. They shared knowing smiles, secrets passed down through generations of geishas. Soon, they would grace the stage with their elegance and artistry."
+},
+"ai_description": "The artwork depicts four Japanese women adorned in ornate traditional clothing surrounded by a complex pattern of floral and geometric designs.",
+"ai_keywords": [
+"Japan",
+"women",
+"traditional dress",
+"pattern",
+"ornate"
+],
+"ai_shortstory": "Beneath the blossoming cherry trees, four sisters prepared for an evening celebration. Each wore kimonos meticulously decorated with swirling vines and delicate flowers. A gentle breeze rustled their ornate headdresses as they fanned themselves in the twilight. They shared knowing smiles, secrets passed down through generations of geishas. Soon, they would grace the stage with their elegance and artistry.",
+"end_time": "2025-10-05T13:49:03.885741"
+},
+{
+"file_path": "page_52.jpg",
+"start_time": "2025-10-05T13:49:03.886988",
+"status": "started",
+"original_file_size": 366108,
+"original_mtime": 1759258080.162052,
+"ai_response": {
+"title": "Stylized Portrait Group:Intricate Line Art and Figures",
+"description": "This black and white illustration depicts a group of stylized figures amidst intricate patterns and organic forms.",
+"keywords": [
+"portrait",
+"line art",
+"abstract",
+"figure drawing",
+"pattern"
+],
+"shortstory": "A collective spirit resonated within this gathering of souls, their faces etched with playful curiosity. Each held a piece of the larger story, interwoven with twisting vines and avian grace. Music seemed to float between them, carried on the wind woven into their hair. Though unconventional in form, a sense of joyful unity filled the space. Their expressions hinted at secrets shared and adventures yet to come."
+},
+"ai_description": "This black and white illustration depicts a group of stylized figures amidst intricate patterns and organic forms.",
+"ai_keywords": [
+"portrait",
+"line art",
+"abstract",
+"figure drawing",
+"pattern"
+],
+"ai_shortstory": "A collective spirit resonated within this gathering of souls, their faces etched with playful curiosity. Each held a piece of the larger story, interwoven with twisting vines and avian grace. Music seemed to float between them, carried on the wind woven into their hair. Though unconventional in form, a sense of joyful unity filled the space. Their expressions hinted at secrets shared and adventures yet to come.",
+"end_time": "2025-10-05T13:49:10.390162"
+},
+{
+"file_path": "page_54.jpg",
+"start_time": "2025-10-05T13:49:10.390551",
+"status": "started",
+"original_file_size": 412982,
+"original_mtime": 1759258080.2151136,
+"ai_response": {
+"title": "Stylized Figures Amidst Geometric Structures",
+"description": "This black and white illustration features stylized human figures integrated within a complex arrangement of geometric architectural elements.",
+"keywords": [
+"abstract",
+"geometric",
+"figures",
+"illustration",
+"pattern"
+],
+"shortstory": "The city hummed with an unseen energy, its buildings grown organically from the earth. Within this landscape lived people adorned with intricate patterns mirroring their surroundings. A central figure seemed to be a conduit of this strange power, surrounded by watchful guardians. Their existence was both ordinary and otherworldly, bound by the geometry of their lives. Its a place where architecture is alive."
+},
+"ai_description": "This black and white illustration features stylized human figures integrated within a complex arrangement of geometric architectural elements.",
+"ai_keywords": [
+"abstract",
+"geometric",
+"figures",
+"illustration",
+"pattern"
+],
+"ai_shortstory": "The city hummed with an unseen energy, its buildings grown organically from the earth. Within this landscape lived people adorned with intricate patterns mirroring their surroundings. A central figure seemed to be a conduit of this strange power, surrounded by watchful guardians. Their existence was both ordinary and otherworldly, bound by the geometry of their lives. Its a place where architecture is alive.",
+"end_time": "2025-10-05T13:49:16.766331"
+},
+{
+"file_path": "page_56.jpg",
+"start_time": "2025-10-05T13:49:16.766905",
+"status": "started",
+"original_file_size": 528088,
+"original_mtime": 1759258080.2732139,
+"ai_response": {
+"title": "Surreal Dreamscape:A Black and White Intricate Illustration",
+"description": "This black-and-white illustration depicts a surreal dreamlike scene filled with overlapping figures, geometric patterns, and abstract shapes.",
+"keywords": [
+"surrealism",
+"dreamscape",
+"black and white",
+"illustration",
+"abstract"
+],
+"shortstory": "Lost in a labyrinth of thoughts, the figure searches for an escape. Fragmented faces and repeating symbols hint at buried memories. A sense of disorientation pervades the dreamlike space as shapes twist and blend. The intricate details suggest a subconscious struggle for clarity. Ultimately, its a journey into the depths of imagination."
+},
+"ai_description": "This black-and-white illustration depicts a surreal dreamlike scene filled with overlapping figures, geometric patterns, and abstract shapes.",
+"ai_keywords": [
+"surrealism",
+"dreamscape",
+"black and white",
+"illustration",
+"abstract"
+],
+"ai_shortstory": "Lost in a labyrinth of thoughts, the figure searches for an escape. Fragmented faces and repeating symbols hint at buried memories. A sense of disorientation pervades the dreamlike space as shapes twist and blend. The intricate details suggest a subconscious struggle for clarity. Ultimately, its a journey into the depths of imagination.",
+"end_time": "2025-10-05T13:49:23.306162"
+},
+{
+"file_path": "page_58.jpg",
+"start_time": "2025-10-05T13:49:23.306512",
+"status": "started",
+"original_file_size": 384526,
+"original_mtime": 1759258080.3252952,
+"ai_response": {
+"title": "Intricate Fantasy Creature Illustration - Black and White",
+"description": "This is a detailed black-and-white illustration featuring fantastical creatures intricately interwoven with decorative patterns.",
+"keywords": [
+"creature",
+"fantasy",
+"illustration",
+"zentangle",
+"ornate"
+],
+"shortstory": "Deep within the Whispering Woods, strange beings stirred. They were guardians of forgotten magic, their forms a tapestry of scales and swirling vines. A long-necked sentinel watched over its kin, while intricate patterns pulsed with hidden energy. The creatures existence was a silent testament to an ancient world.Their beauty lay in their complexity and mystery."
+},
+"ai_description": "This is a detailed black-and-white illustration featuring fantastical creatures intricately interwoven with decorative patterns.",
+"ai_keywords": [
+"creature",
+"fantasy",
+"illustration",
+"zentangle",
+"ornate"
+],
+"ai_shortstory": "Deep within the Whispering Woods, strange beings stirred. They were guardians of forgotten magic, their forms a tapestry of scales and swirling vines. A long-necked sentinel watched over its kin, while intricate patterns pulsed with hidden energy. The creatures existence was a silent testament to an ancient world.Their beauty lay in their complexity and mystery.",
+"end_time": "2025-10-05T13:49:29.740895"
+},
+{
+"file_path": "page_60.jpg",
+"start_time": "2025-10-05T13:49:29.741173",
+"status": "started",
+"original_file_size": 494735,
+"original_mtime": 1759258080.3795083,
+"ai_response": {
+"title": "Intricate Portrait:A Complex Black and White Drawing",
+"description": "This is a detailed black and white drawing featuring an abstract portrait surrounded by intricate patterns.",
+"keywords": [
+"portrait",
+"abstract",
+"black and white",
+"drawing",
+"intricate"
+],
+"shortstory": "The figure, veiled in geometric complexity, seemed to observe the world with silent intensity. Around it, a labyrinth of lines pulsed with hidden energy, creating an illusion of movement. A smaller face peers from below, a reflection of the larger forms secrets. Lost within the design, one could almost hear whispers carried on the wind of its patterns. This is a portrait of a mind at peace amidst chaos."
+},
+"ai_description": "This is a detailed black and white drawing featuring an abstract portrait surrounded by intricate patterns.",
+"ai_keywords": [
+"portrait",
+"abstract",
+"black and white",
+"drawing",
+"intricate"
+],
+"ai_shortstory": "The figure, veiled in geometric complexity, seemed to observe the world with silent intensity. Around it, a labyrinth of lines pulsed with hidden energy, creating an illusion of movement. A smaller face peers from below, a reflection of the larger forms secrets. Lost within the design, one could almost hear whispers carried on the wind of its patterns. This is a portrait of a mind at peace amidst chaos.",
+"end_time": "2025-10-05T13:49:36.414679"
+},
+{
+"file_path": "page_62.jpg",
+"start_time": "2025-10-05T13:49:36.414871",
+"status": "started",
+"original_file_size": 419771,
+"original_mtime": 1759258080.4324784,
+"ai_response": {
+"title": "Musical Reverie:A Whimsical Black and White Illustration",
+"description": "This intricate black and white illustration depicts a musician playing an instrument amidst abstract shapes and symbolic figures.",
+"keywords": [
+"music",
+"illustration",
+"abstract",
+"whimsical",
+"black and white"
+],
+"shortstory": "The musician lost herself in the melody, her eyes reflecting the dance of notes. Around her, swirling forms seemed to vibrate with the musics energy. A flock of birds mirrored the freedom she felt within the rhythm. The instrument echoed a forgotten language, weaving a tale for unseen ears. In that moment, time dissolved into pure artistic expression."
+},
+"ai_description": "This intricate black and white illustration depicts a musician playing an instrument amidst abstract shapes and symbolic figures.",
+"ai_keywords": [
+"music",
+"illustration",
+"abstract",
+"whimsical",
+"black and white"
+],
+"ai_shortstory": "The musician lost herself in the melody, her eyes reflecting the dance of notes. Around her, swirling forms seemed to vibrate with the musics energy. A flock of birds mirrored the freedom she felt within the rhythm. The instrument echoed a forgotten language, weaving a tale for unseen ears. In that moment, time dissolved into pure artistic expression.",
+"end_time": "2025-10-05T13:49:42.801224"
+},
+{
+"file_path": "page_64.jpg",
+"start_time": "2025-10-05T13:49:42.907995",
+"status": "started",
+"original_file_size": 406123,
+"original_mtime": 1759258080.4829752,
+"ai_response": {
+"title": "Ornate Portrait:A Visionarys Detailed Black and White Drawing",
+"description": "This intricate black-and-white drawing depicts a stylized portrait of a woman adorned with elaborate ornamentation and fantastical creatures.",
+"keywords": [
+"portrait",
+"ornate",
+"drawing",
+"black and white",
+"fantasy"
+],
+"shortstory": "The queen dreamt of feathered guardians and wheeled constellations. Her face, framed by intricate patterns, held secrets whispered by the wind. She commanded a kingdom woven from dreams and ink. A tiny, watchful eye peeked from amidst the foliage, guarding her slumber. The drawing itself was a portal to her hidden world."
+},
+"ai_description": "This intricate black-and-white drawing depicts a stylized portrait of a woman adorned with elaborate ornamentation and fantastical creatures.",
+"ai_keywords": [
+"portrait",
+"ornate",
+"drawing",
+"black and white",
+"fantasy"
+],
+"ai_shortstory": "The queen dreamt of feathered guardians and wheeled constellations. Her face, framed by intricate patterns, held secrets whispered by the wind. She commanded a kingdom woven from dreams and ink. A tiny, watchful eye peeked from amidst the foliage, guarding her slumber. The drawing itself was a portal to her hidden world.",
+"end_time": "2025-10-05T13:49:49.377425"
+},
+{
+"file_path": "page_66.jpg",
+"start_time": "2025-10-05T13:49:49.377630",
+"status": "started",
+"original_file_size": 252456,
+"original_mtime": 1759258080.5282192,
+"ai_response": {
+"title": "Surreal Portrait and Architectural Dreamscape",
+"description": "This black and white artwork features a stylized portrait intertwined with abstract architectural elements and intricate patterns.",
+"keywords": [
+"surrealism",
+"portrait",
+"architecture",
+"abstract",
+"lineart"
+],
+"shortstory": "The face smiled knowingly, observing the labyrinthine structures built around it. Within the geometric forms lived tiny, watchful eyes, reflecting a hidden world. A spiral staircase hinted at an endless ascent into the subconscious. The lines pulsed with energy, creating a dreamlike reality where perspective warped and shifted. It was a silent testament to imaginations boundless power."
+},
+"ai_description": "This black and white artwork features a stylized portrait intertwined with abstract architectural elements and intricate patterns.",
+"ai_keywords": [
+"surrealism",
+"portrait",
+"architecture",
+"abstract",
+"lineart"
+],
+"ai_shortstory": "The face smiled knowingly, observing the labyrinthine structures built around it. Within the geometric forms lived tiny, watchful eyes, reflecting a hidden world. A spiral staircase hinted at an endless ascent into the subconscious. The lines pulsed with energy, creating a dreamlike reality where perspective warped and shifted. It was a silent testament to imaginations boundless power.",
+"end_time": "2025-10-05T13:49:55.701702"
+},
+{
+"file_path": "page_68.jpg",
+"start_time": "2025-10-05T13:49:55.701908",
+"status": "started",
+"original_file_size": 509142,
+"original_mtime": 1759258080.584495,
+"ai_response": {
+"title": "Abstract Cityscape:Vibrant and Chaotic Urban Vision",
+"description": "This is a vibrant, abstract depiction of a cityscape featuring complex geometric shapes and a multitude of colors.",
+"keywords": [
+"abstract",
+"cityscape",
+"geometric",
+"colorful",
+"urban"
+],
+"shortstory": "The city pulsed with a frenetic energy, its buildings twisting into impossible forms. A kaleidoscope of light reflected off the chaotic architecture, hinting at hidden stories within each structure. Lost in the vibrant maze, a traveler sought a familiar landmark amidst the dizzying array. Yet, there was an undeniable beauty in this unpredictable landscape, a symphony of shapes and hues. This place felt both alien and strangely inviting."
+},
+"ai_description": "This is a vibrant, abstract depiction of a cityscape featuring complex geometric shapes and a multitude of colors.",
+"ai_keywords": [
+"abstract",
+"cityscape",
+"geometric",
+"colorful",
+"urban"
+],
+"ai_shortstory": "The city pulsed with a frenetic energy, its buildings twisting into impossible forms. A kaleidoscope of light reflected off the chaotic architecture, hinting at hidden stories within each structure. Lost in the vibrant maze, a traveler sought a familiar landmark amidst the dizzying array. Yet, there was an undeniable beauty in this unpredictable landscape, a symphony of shapes and hues. This place felt both alien and strangely inviting.",
+"end_time": "2025-10-05T13:50:02.272016"
+},
+{
+"file_path": "page_70.jpg",
+"start_time": "2025-10-05T13:50:02.272208",
+"status": "started",
+"original_file_size": 442100,
+"original_mtime": 1759258080.6396549,
+"ai_response": {
+"title": "Blue Cut Paper Collage:Architectural Fantasy and Patterns",
+"description": "This artwork is a layered cut paper collage featuring an abstracted architectural structure interwoven with intricate patterns.",
+"keywords": [
+"cut paper",
+"collage",
+"architecture",
+"pattern",
+"blue"
+],
+"shortstory": "A hidden city emerges from the depths of swirling blue forms. Geometric structures rise, hinting at untold stories within their walls. Intricate patterns dance across the surfaces, reflecting a forgotten culture. A single figure gazes out, observing the whimsical landscape. The paper whispers secrets of an imagined world."
+},
+"ai_description": "This artwork is a layered cut paper collage featuring an abstracted architectural structure interwoven with intricate patterns.",
+"ai_keywords": [
+"cut paper",
+"collage",
+"architecture",
+"pattern",
+"blue"
+],
+"ai_shortstory": "A hidden city emerges from the depths of swirling blue forms. Geometric structures rise, hinting at untold stories within their walls. Intricate patterns dance across the surfaces, reflecting a forgotten culture. A single figure gazes out, observing the whimsical landscape. The paper whispers secrets of an imagined world.",
+"end_time": "2025-10-05T13:50:08.269435"
+},
+{
+"file_path": "page_72.jpg",
+"start_time": "2025-10-05T13:50:08.269664",
+"status": "started",
+"original_file_size": 395998,
+"original_mtime": 1759258080.6934538,
+"ai_response": {
+"title": "Abstract Portrait:Dreams and Reflections in Line Work",
+"description": "This is a highly stylized black and white portrait featuring intricate line work and abstract shapes.",
+"keywords": [
+"portrait",
+"abstract",
+"line art",
+"expressionism",
+"dreamscape"
+],
+"shortstory": "The figure dreamt of melodies, each note woven into the fabric of her subconscious. Twisted lines mirrored inner turmoil, a labyrinthine exploration of self. A spectral reflection observed from afar, detached yet knowing. The silence hummed with unspoken truths and fragmented memories. Dawn would eventually break, but for now, she remained lost in the beauty of her dream."
+},
+"ai_description": "This is a highly stylized black and white portrait featuring intricate line work and abstract shapes.",
+"ai_keywords": [
+"portrait",
+"abstract",
+"line art",
+"expressionism",
+"dreamscape"
+],
+"ai_shortstory": "The figure dreamt of melodies, each note woven into the fabric of her subconscious. Twisted lines mirrored inner turmoil, a labyrinthine exploration of self. A spectral reflection observed from afar, detached yet knowing. The silence hummed with unspoken truths and fragmented memories. Dawn would eventually break, but for now, she remained lost in the beauty of her dream.",
+"end_time": "2025-10-05T13:50:14.510374"
+},
+{
+"file_path": "page_74.jpg",
+"start_time": "2025-10-05T13:50:14.510546",
+"status": "started",
+"original_file_size": 411976,
+"original_mtime": 1759258080.7452478,
+"ai_response": {
+"title": "Abstract Musical Dreamscape in Blue and Black",
+"description": "This is a complex, abstract illustration featuring geometric shapes, patterns, and musical instrument references in blue and black.",
+"keywords": [
+"abstract art",
+"geometric",
+"musical instruments",
+"blue",
+"illustration"
+],
+"shortstory": "The melody drifted from the depths of a fractured dream. Sharp angles and swirling blues formed a landscape of sound. A ukulele whispered secrets alongside silent trumpets, their forms barely discernible. Lost faces peered out from within the geometric chaos, yearning for harmony. Ultimately, its a visual echo of a forgotten song."
+},
+"ai_description": "This is a complex, abstract illustration featuring geometric shapes, patterns, and musical instrument references in blue and black.",
+"ai_keywords": [
+"abstract art",
+"geometric",
+"musical instruments",
+"blue",
+"illustration"
+],
+"ai_shortstory": "The melody drifted from the depths of a fractured dream. Sharp angles and swirling blues formed a landscape of sound. A ukulele whispered secrets alongside silent trumpets, their forms barely discernible. Lost faces peered out from within the geometric chaos, yearning for harmony. Ultimately, its a visual echo of a forgotten song.",
+"end_time": "2025-10-05T13:50:20.771150"
+}
+]
+}
+`;
+
+
+        // Global state variables
+        let logData = null;
+        let currentIndex = 0;
+        let totalItems = 0;
+        
+        // --- PREVIOUS FETCH LOGIC REMOVED ---
+        // const JSON_FILE_PATH = "exif_update_log_20250930_160606.json";
+
+        // Image path helper, adjusted to no longer need the "" prefix in the function,
+        // since the original JSON file_path includes it for this particular data set.
+        // NOTE: If you are using images from the same directory as index.html, 
+        // and the file_path in the JSON is just "page_XX.jpg", you might need to
+        // adjust this back to `return \`${filename}\`;`.
+        const getRelativeImageUrl = (filename) => {
+            return `${filename}`;
+        };
+
+        // DOM Elements definition
+        const elements = {
+            summaryInfo: document.getElementById('summary-info'),
+            pageImage: document.getElementById('page-image'),
+            imageFilename: document.getElementById('image-filename'),
+            pageContent: document.getElementById('page-content'),
+            pageCounter: document.getElementById('page-counter'),
+            pageTitle: document.getElementById('page-title'),
+            pageShortstory: document.getElementById('page-shortstory'),
+            pageDescription: document.getElementById('page-description'),
+            pageKeywords: document.getElementById('page-keywords'),
+            currentAbsPath: document.getElementById('current-abs-path'),
+            imageContainer: document.getElementById('image-container'), 
+            lightboxModal: document.getElementById('lightbox-modal'), 
+            lightboxImage: document.getElementById('lightbox-image'), 
+            // Selecting buttons using standard filtering logic
+            prevBtns: Array.from(document.querySelectorAll('.nav-btn')).filter(btn => btn.textContent.includes('Prev') || btn.textContent.includes('Previous')),
+            nextBtns: Array.from(document.querySelectorAll('.nav-btn')).filter(btn => btn.textContent.includes('Next')),
+        };
+
+        // --- Lightbox Functions ---
+        const openLightbox = () => {
+            const currentSrc = elements.pageImage.src;
+            if (currentSrc) {
+                elements.lightboxImage.src = currentSrc;
+                elements.lightboxModal.classList.add('open');
+            }
+        };
+
+        const closeLightbox = (event) => {
+            if (event.target.id === 'lightbox-modal' || event.target.classList.contains('lightbox-close')) {
+                elements.lightboxModal.classList.remove('open');
+            }
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && elements.lightboxModal.classList.contains('open')) {
+                elements.lightboxModal.classList.remove('open');
+            }
+        });
+        
+        // --- Core Rendering Function ---
+        const renderPage = (index, direction = 0) => {
+            if (index < 0 || index >= totalItems) return;
+            if (!logData) return; 
+
+            currentIndex = index;
+            const item = logData.detailed_log[currentIndex];
+            const isForward = direction >= 0;
+
+            // 1. Apply Paging Transition Start State (Fade out and slide)
+            elements.pageContent.classList.remove('page-active', 'page-enter', 'page-enter-left');
+            if (direction !== 0) {
+                 elements.pageContent.classList.add(isForward ? 'page-enter' : 'page-enter-left');
+            }
+
+            // 2. Update Content
+            setTimeout(() => {
+                const title = item.ai_response?.title || item.title || 'Untitled Page';
+                const shortstory = item.ai_response?.shortstory || item.ai_shortstory || 'No short story available.';
+                const description = item.ai_description || 'No description available.';
+                const keywords = item.ai_keywords || [];
+
+                const relativePath = getRelativeImageUrl(item.file_path);
+                elements.pageImage.src = relativePath;
+                
+                elements.imageFilename.textContent = `File: ${relativePath}`;
+                elements.pageCounter.textContent = `Page ${currentIndex + 1} of ${totalItems}`;
+                elements.pageTitle.textContent = title;
+                elements.pageShortstory.textContent = shortstory;
+                elements.pageDescription.textContent = description;
+                // Since absolute paths are for local context, display them only if they exist
+                elements.currentAbsPath.textContent = item.absolute_path || 'Absolute path not recorded.';
+                document.getElementById('currentabspath').style.display = 'block'; // Show path info
+
+                // Render Keywords
+                elements.pageKeywords.innerHTML = keywords.map(kw => 
+                    `<span class="inline-flex items-center px-3 py-1 text-sm font-medium bg-blue-100 text-blue-800 rounded-full shadow-inner">${kw}</span>`
+                ).join('');
+
+                // 3. Apply Paging Transition End State (Fade in)
+                elements.pageContent.classList.remove('page-enter', 'page-enter-left');
+                elements.pageContent.classList.add('page-active');
+                
+                // 4. Update Button States
+                updateNavigationButtons();
+            }, 100); // Short delay for transition effect
+        };
+
+        // --- Navigation Logic ---
+        const navigate = (step) => {
+            const newIndex = currentIndex + step;
+            if (newIndex >= 0 && newIndex < totalItems) {
+                renderPage(newIndex, step);
+            }
+        };
+
+        const updateNavigationButtons = () => {
+            const isFirst = currentIndex === 0;
+            const isLast = currentIndex === totalItems - 1;
+
+            const updateButtonState = (btn) => {
+                const isPrev = btn.textContent.includes('Prev') || btn.textContent.includes('Previous');
+                const isDisabled = isPrev ? isFirst : isLast;
+                
+                btn.disabled = isDisabled;
+                btn.classList.toggle('opacity-50', isDisabled);
+                btn.classList.toggle('cursor-not-allowed', isDisabled);
+            };
+
+            elements.prevBtns.forEach(updateButtonState);
+            elements.nextBtns.forEach(updateButtonState);
+        };
+
+        // --- Initialization - Load Data Synchronously ---
+        const initializeApp = () => {
+            elements.summaryInfo.textContent = `Loading data from embedded source...`;
+            document.getElementById('currentabspath').style.display = 'none'; // Hide path info initially
+
+            try {
+                // 1. Parse the embedded JSON string
+                logData = JSON.parse(JSON_DATA_STRING);
+                
+                // 2. Set total items
+                totalItems = logData.detailed_log.length;
+                
+                if (totalItems === 0) {
+                    elements.summaryInfo.innerHTML = '<span class="text-red-600 font-bold">Error:</span> Embedded JSON is empty.';
+                    return;
+                }
+
+                // 3. Render Summary Info
+                const summary = logData.summary;
+                elements.summaryInfo.innerHTML = `Processed **${totalItems} items** | Duration: ${summary.duration} | Directory: <code class="font-mono text-sm">${summary.directory}</code>`;
+
+                // 4. Attach Event Listeners
+                elements.prevBtns.forEach(btn => btn.addEventListener('click', () => navigate(-1)));
+                elements.nextBtns.forEach(btn => btn.addEventListener('click', () => navigate(1)));
+                elements.imageContainer.addEventListener('click', openLightbox); 
+                
+                // Handle Keyboard Navigation
+                document.addEventListener('keydown', (e) => {
+                    if (!elements.lightboxModal.classList.contains('open')) {
+                        if (e.key === 'ArrowRight') {
+                            navigate(1);
+                        } else if (e.key === 'ArrowLeft') {
+                            navigate(-1);
+                        }
+                    }
+                });
+
+                // 5. Start on the first page
+                renderPage(0);
+
+            } catch (error) {
+                console.error("Failed to parse embedded JSON data:", error);
+                elements.summaryInfo.innerHTML = `<span class="text-red-600 font-bold">Fatal Error:</span> Failed to parse the embedded JSON data. Details: ${error.message}`;
+                elements.prevBtns.forEach(btn => btn.disabled = true);
+                elements.nextBtns.forEach(btn => btn.disabled = true);
+            }
+        };
+
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>
