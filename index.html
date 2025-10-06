@@ -1279,8 +1279,8 @@
                 elements.pageShortstory.textContent = shortstory;
                 elements.pageDescription.textContent = description;
                 // Since absolute paths are for local context, display them only if they exist
-                elements.currentAbsPath.textContent = item.absolute_path || 'Absolute path not recorded.';
-                document.getElementById('currentabspath').style.display = 'block'; // Show path info
+                // elements.currentAbsPath.textContent = item.absolute_path || 'Absolute path not recorded.';
+                // document.getElementById('currentabspath').style.display = 'block'; // Show path info
 
                 // Render Keywords
                 elements.pageKeywords.innerHTML = keywords.map(kw => 
@@ -1373,3 +1373,4 @@
     </script>
 </body>
 </html>
+
